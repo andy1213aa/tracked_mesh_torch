@@ -10,7 +10,7 @@ import einops
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 EPOCHS = 200
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 tfrecord_path = "../training_data/test.tfrecord"
 
 
@@ -112,6 +112,7 @@ def train(net, dataloader, optimizer, criterion, epochs):
             print(
                 f'Epoch: {epoch+1} Step: {(epoch+1)*(i+1)*BATCH_SIZE} L2 loss: {loss: 0.5f}'
             )
+
         if (epoch % 1 == 0):
             pred_vtx = net(img, vtx_mean)
             render_images = criterion.renderer.render(
@@ -135,21 +136,29 @@ def train(net, dataloader, optimizer, criterion, epochs):
                 'b h w c -> b c h w',
             )
 
-            print(img.shape)
-            print(render_images.shape)
-
             writer.add_image('input_images',
-                             img, (epoch + 1) * (i + 1) * BATCH_SIZE,
+                             img.to(torch.uint8),
+                             (epoch + 1) * (i + 1) * BATCH_SIZE,
                              dataformats='NCHW')
             writer.add_image('pred_images',
                              render_images, (epoch + 1) * (i + 1) * BATCH_SIZE,
                              dataformats='NCHW')
+
+            writer.add_mesh('real_mesh', vtx)
+            writer.add_mesh('pred_mesh', pred_vtx)
+
             if loss < bestLoss:
                 bestLoss = loss
                 bestepoch = epoch
+                bestModel = net
 
-    torch.save(bestModel,
-               "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
+            torch.save(
+                net,
+                "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
+
+        torch.save(
+            bestModel,
+            "model/best_epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
     return net
 
 

@@ -1,13 +1,13 @@
 
 import numpy as np
-
+import cv2
 
 def decode_image(features):
     # get BGR image from bytes
 
     features["img"] = np.frombuffer(features["img"], dtype=np.float32).reshape(
         (512, 334, 3)).copy()
-
+    # features["img"] = cv2.cvtColor(features["img"] , cv2.COLOR_BGR2RGB)
     features["vtx"] = np.frombuffer(features["vtx"], dtype=np.float32).reshape(
         (7306, 3)).copy()
 
