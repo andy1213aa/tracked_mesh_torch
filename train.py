@@ -125,6 +125,7 @@ def train(net, dataloader, optimizer, criterion, epochs):
                 focal,
                 princpt,
             )
+
             img = einops.rearrange(
                 img,
                 'b h w c -> b c h w',
@@ -133,8 +134,16 @@ def train(net, dataloader, optimizer, criterion, epochs):
                 render_images,
                 'b h w c -> b c h w',
             )
-            writer.add_image('input_images', img, epoch)
-            writer.add_image('pred_images', render_images, epoch)
+
+            print(img.shape)
+            print(render_images.shape)
+
+            writer.add_image('input_images',
+                             img, (epoch + 1) * (i + 1) * BATCH_SIZE,
+                             dataformats='NCHW')
+            writer.add_image('pred_images',
+                             render_images, (epoch + 1) * (i + 1) * BATCH_SIZE,
+                             dataformats='NCHW')
             if loss < bestLoss:
                 bestLoss = loss
                 bestepoch = epoch
