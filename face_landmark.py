@@ -29,7 +29,7 @@ class FaceMesh():
             
             # Print and draw face mesh landmarks on the image.
             if not results.multi_face_landmarks:
-                return False, kpt
+                continue
             
             annotated_image = img.copy()
             for face_landmarks in results.multi_face_landmarks:
@@ -38,5 +38,5 @@ class FaceMesh():
                     kpt[i, idx, 0] = data_point.x * annotated_image.shape[1]
                     kpt[i, idx, 1] = data_point.y * annotated_image.shape[0]
 
-        return True, kpt
+        return kpt
 

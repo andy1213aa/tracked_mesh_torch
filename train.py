@@ -19,8 +19,11 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     dataloader = get_dataloader()
-    loss = landmark_l2_loss().to(device)
-    model_ft = train(model, dataloader, optimizer, loss, EPOCHS)
+    # loss = nn.MSELoss().to(device)
+    # loss_chamfer, _ = chamfer_distance(vtx, pred_vtx)
+    # loss = landmark_l2_loss().to(device)
+    criterion = customLoss().to(device)
+    model_ft = train(model, dataloader, optimizer, criterion, EPOCHS)
 
 
 def get_dataloader():
@@ -46,10 +49,10 @@ def get_dataloader():
     return loader
 
 
-class landmark_l2_loss(nn.Module):
+class render_and_landmark():
 
     def __init__(self) -> None:
-        super(landmark_l2_loss, self).__init__()
+        super(render_and_landmark, self).__init__()
 
         from renderer import Renderer
         from face_landmark import FaceMesh
@@ -58,24 +61,36 @@ class landmark_l2_loss(nn.Module):
         self.face_landmark_detector = FaceMesh(batch_size=BATCH_SIZE,
                                                kpt_num=478)
 
-    def forward(self, pred_vtx, img, vtx, tex, verts_uvs, faces_uvs, verts_idx,
+    def detect(self, pred_vtx, img, vtx, tex, verts_uvs, faces_uvs, verts_idx,
                 head_pose, focal, princpt, extrinsic_camera):
 
         pred_images = self.renderer.render(pred_vtx, faces_uvs, verts_uvs,
                                            verts_idx, tex, head_pose,
                                            extrinsic_camera, focal, princpt)
 
-        pred_res, pred_kpt = self.face_landmark_detector.detect(pred_images)
-        loss_chamfer, _ = chamfer_distance(vtx, pred_vtx)
+        pred_kpt = self.face_landmark_detector.detect(pred_images)
 
-        if not pred_res:
-            return loss_chamfer
-
-        real_res, real_kpt = self.face_landmark_detector.detect(img)
+        real_kpt = self.face_landmark_detector.detect(img)
         real_kpt = torch.from_numpy(real_kpt).to(device)
-
         pred_kpt = torch.from_numpy(pred_kpt).to(device)
-        return torch.sqrt(torch.sum((real_kpt - pred_kpt)**2)) + loss_chamfer
+
+        return pred_images, real_kpt, pred_kpt
+        # return torch.sqrt(torch.sum((real_kpt - pred_kpt)**2)) + loss_chamfer
+
+
+class customLoss(nn.Module):
+
+    def __init__(self):
+        super(customLoss, self).__init__()
+        self.mse = nn.MSELoss()
+        self.chamfer = chamfer_distance
+
+    def forward(self, real_vtx, pred_vtx, real_kpts, fake_kpts):
+
+        vtx_loss = self.chamfer(real_vtx, pred_vtx)
+        kpt_loss = self.mse(real_kpts, fake_kpts)
+
+        return kpt_loss
 
 
 def train(net, dataloader, optimizer, criterion, epochs):
@@ -84,7 +99,7 @@ def train(net, dataloader, optimizer, criterion, epochs):
     bestModel = net
 
     writer = SummaryWriter('runs')
-
+    feature_detector = render_and_landmark()
     for epoch in range(epochs):
         for i, batch in enumerate(dataloader):
 
@@ -101,9 +116,12 @@ def train(net, dataloader, optimizer, criterion, epochs):
             extrinsic_camera = batch['extrinsic_camera'].to(device)
 
             pred_vtx = net(img, vtx_mean)
-            loss = criterion(pred_vtx, img, vtx, tex, verts_uvs, faces_uvs,
-                             verts_idx, head_pose, focal, princpt,
-                             extrinsic_camera)
+            
+            render_images, real_kpts, pred_kpts = feature_detector.detect(
+                pred_vtx, img, vtx, tex, verts_uvs, faces_uvs, verts_idx,
+                head_pose, focal, princpt, extrinsic_camera)
+            
+            loss = criterion(vtx, pred_vtx, real_kpts, pred_kpts)
 
             optimizer.zero_grad()
             loss.requires_grad_(True)
@@ -114,18 +132,6 @@ def train(net, dataloader, optimizer, criterion, epochs):
             )
 
         if (epoch % 1 == 0):
-            pred_vtx = net(img, vtx_mean)
-            render_images = criterion.renderer.render(
-                pred_vtx,
-                faces_uvs,
-                verts_uvs,
-                verts_idx,
-                tex,
-                head_pose,
-                extrinsic_camera,
-                focal,
-                princpt,
-            )
 
             img = einops.rearrange(
                 img,
@@ -152,13 +158,13 @@ def train(net, dataloader, optimizer, criterion, epochs):
                 bestepoch = epoch
                 bestModel = net
 
-            torch.save(
-                net,
-                "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
+            # torch.save(
+            #     net,
+            #     "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
 
-        torch.save(
-            bestModel,
-            "model/best_epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
+    torch.save(
+        bestModel,
+        "model/best_epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
     return net
 
 
