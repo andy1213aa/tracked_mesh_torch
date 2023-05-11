@@ -62,15 +62,15 @@ class render_and_landmark():
                                                kpt_num=478)
 
     def detect(self, pred_vtx, img, vtx, tex, verts_uvs, faces_uvs, verts_idx,
-                head_pose, focal, princpt, extrinsic_camera):
+               head_pose, focal, princpt, extrinsic_camera):
 
         pred_images = self.renderer.render(pred_vtx, faces_uvs, verts_uvs,
                                            verts_idx, tex, head_pose,
                                            extrinsic_camera, focal, princpt)
 
+        real_kpt = self.face_landmark_detector.detect(img)
         pred_kpt = self.face_landmark_detector.detect(pred_images)
 
-        real_kpt = self.face_landmark_detector.detect(img)
         real_kpt = torch.from_numpy(real_kpt).to(device)
         pred_kpt = torch.from_numpy(pred_kpt).to(device)
 
@@ -87,7 +87,7 @@ class customLoss(nn.Module):
 
     def forward(self, real_vtx, pred_vtx, real_kpts, fake_kpts):
 
-        vtx_loss = self.chamfer(real_vtx, pred_vtx)
+        vtx_loss, _ = self.chamfer(real_vtx, pred_vtx)
         kpt_loss = self.mse(real_kpts, fake_kpts)
 
         return kpt_loss
@@ -116,14 +116,15 @@ def train(net, dataloader, optimizer, criterion, epochs):
             extrinsic_camera = batch['extrinsic_camera'].to(device)
 
             pred_vtx = net(img, vtx_mean)
-            
+
             render_images, real_kpts, pred_kpts = feature_detector.detect(
                 pred_vtx, img, vtx, tex, verts_uvs, faces_uvs, verts_idx,
                 head_pose, focal, princpt, extrinsic_camera)
-            
+
             loss = criterion(vtx, pred_vtx, real_kpts, pred_kpts)
 
             optimizer.zero_grad()
+
             loss.requires_grad_(True)
             loss.backward()
             optimizer.step()
@@ -162,9 +163,7 @@ def train(net, dataloader, optimizer, criterion, epochs):
             #     net,
             #     "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
 
-    torch.save(
-        bestModel,
-        "model/best_epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
+    torch.save(bestModel, "model.pth")
     return net
 
 

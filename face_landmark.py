@@ -15,7 +15,7 @@ class FaceMesh():
                                 min_detection_confidence=0.5)
         self.kpt_num = kpt_num
         self.batch_size = batch_size
-        
+        self.error_idx = 0
     def detect(self, images):
         
         kpt = np.zeros((self.batch_size, self.kpt_num, 2))
@@ -23,12 +23,15 @@ class FaceMesh():
         
         for i, img in enumerate(images):
             # Convert the BGR image to RGB before processing.
-  
+            
             results = self.face_mesh.process(img)
 
             
             # Print and draw face mesh landmarks on the image.
             if not results.multi_face_landmarks:
+                # print(f'{i}_fuck')
+                cv2.imwrite(f'pred_{self.error_idx}.png', img)
+                self.error_idx+= 1
                 continue
             
             annotated_image = img.copy()

@@ -84,4 +84,4 @@ class Renderer():
                                                            lights=lights))
             images = renderer(meshes, znear=0.0, zfar=1500.0)
 
-        return images[..., :3]
+        return images[..., :3] * 255.
