@@ -19,7 +19,7 @@ class FaceMesh():
     def detect(self, images):
         
         kpt = np.zeros((self.batch_size, self.kpt_num, 2))
-        images = images.contiguous().cpu().numpy().astype('uint8')
+        
         
         for i, img in enumerate(images):
             # Convert the BGR image to RGB before processing.
@@ -30,7 +30,7 @@ class FaceMesh():
             # Print and draw face mesh landmarks on the image.
             if not results.multi_face_landmarks:
                 # print(f'{i}_fuck')
-                cv2.imwrite(f'pred_{self.error_idx}.png', img)
+                cv2.imwrite(f'pred_{self.error_idx}.png', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
                 self.error_idx+= 1
                 continue
             

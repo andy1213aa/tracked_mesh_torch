@@ -1,49 +1,33 @@
-
 import numpy as np
 import cv2
+
 
 def decode_image(features):
     # get BGR image from bytes
 
-    features["img"] = np.frombuffer(features["img"], dtype=np.float32).reshape(
-        (512, 334, 3)).copy()
-    # features["img"] = cv2.cvtColor(features["img"] , cv2.COLOR_BGR2RGB)
+    features["camID"] =  np.squeeze(np.frombuffer(features["camID"], dtype=np.int64))
+
+    features["img"] = np.frombuffer(features["img"],
+                                    dtype=np.uint8).astype(np.float32).reshape(
+                                        (512, 334, 3))
+
     features["vtx"] = np.frombuffer(features["vtx"], dtype=np.float32).reshape(
-        (7306, 3)).copy()
+        (7306, 3))
 
-    features["vtx_mean"] = np.frombuffer(features["vtx_mean"],
-                                         dtype=np.float32).reshape(
-                                             (7306, 3)).copy()
+    features["texture"] = np.frombuffer(
+        features["texture"], dtype=np.uint8).astype(np.float32).reshape(
+            (1024, 1024, 3)) / 255.
 
-    features["tex"] = np.frombuffer(features["tex"], dtype=np.float32).reshape(
-        (1024, 1024, 3)).copy() / 255.
     features["verts_uvs"] = np.frombuffer(features["verts_uvs"],
-                                          dtype=np.float32).reshape(
-                                              (-1, 2)).copy()
+                                          dtype=np.float32).reshape((-1, 2))
+
     features["faces_uvs"] = np.frombuffer(features["faces_uvs"],
-                                          dtype=np.float32).reshape(
-                                              (-1, 3)).copy()
+                                          dtype=np.float32).reshape((-1, 3))
+
     features["verts_idx"] = np.frombuffer(features["verts_idx"],
-                                          dtype=np.float32).reshape(
-                                              (-1, 3)).copy(),
+                                          dtype=np.float32).reshape((-1, 3))
+
     features["head_pose"] = np.frombuffer(features["head_pose"],
-                                          dtype=np.float32).reshape(
-                                              (3, 4)).copy()
+                                          dtype=np.float32).reshape((3, 4))
 
-    features["intricsic_camera"] = np.frombuffer(features["intricsic_camera"],
-                                                 dtype=np.float32).reshape(
-                                                     (3, 3)).copy()
-
-    features['focal'] = np.stack([
-        features["intricsic_camera"][0, 0], features["intricsic_camera"][1, 1]
-    ], )
-
-    features['princpt'] = np.stack([
-        features["intricsic_camera"][0, 2], features["intricsic_camera"][1, 2]
-    ], )
-    features["extrinsic_camera"] = np.frombuffer(features["extrinsic_camera"],
-                                                 dtype=np.float32).reshape(
-                                                     (3, 4)).copy()
     return features
-
-

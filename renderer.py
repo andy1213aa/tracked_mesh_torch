@@ -41,22 +41,22 @@ class Renderer():
     def render(
         self,
         verts,
-        faces_uvs,
+        texture,
         verts_uvs,
+        faces_uvs,
         verts_idx,
-        texture_image,
-        transform_head,
-        transform_camera,
+        head_pose,
+        extrinsic,
         focal,
         princpt,
     ):
 
         tex = Textures(verts_uvs=verts_uvs,
                        faces_uvs=faces_uvs,
-                       maps=texture_image)
+                       maps=texture)
 
-        verts_head = self._linear_transform(verts, transform_head)
-        verts_cam = self._linear_transform(verts_head, transform_camera)
+        verts_head = self._linear_transform(verts, head_pose)
+        verts_cam = self._linear_transform(verts_head, extrinsic)
 
         meshes = Meshes(verts=self._split_batch_to_list(verts_cam),
                         faces=self._split_batch_to_list(verts_idx),
@@ -84,4 +84,4 @@ class Renderer():
                                                            lights=lights))
             images = renderer(meshes, znear=0.0, zfar=1500.0)
 
-        return images[..., :3] * 255.
+        return images[..., :3]

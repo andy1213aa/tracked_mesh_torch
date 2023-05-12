@@ -1,16 +1,5 @@
-import os
-
-import numpy as np
-import pandas as pd
-from PIL import Image
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data.dataset import Dataset
-import torchvision.datasets as datasets
-import torchvision.models as models
-import torchvision.transforms as transforms
-from urllib.request import urlopen
+
 import einops
 
 
@@ -48,11 +37,20 @@ class Extracter(nn.Module):
         self.pca = nn.Sequential(nn.Linear(4860, 160),
                                 nn.Linear(160, 7306 * 3))
 
-    def forward(self, img, vtx_mean):
+    def forward(self, img):
         x = einops.rearrange(img, 'b h w c -> b c h w')
         x = self.extracter(x)
         x = einops.rearrange(x, 'b h w c -> b (h w c)')
         x = nn.Dropout(p=0.2)(x)
         x = self.pca(x)
         x = einops.rearrange(x, 'b (v c) -> b v c', c=3)
-        return x + vtx_mean
+        return x
+
+    # def forward(self, img, vtx_mean):
+    #     x = einops.rearrange(img, 'b h w c -> b c h w')
+    #     x = self.extracter(x)
+    #     x = einops.rearrange(x, 'b h w c -> b (h w c)')
+    #     x = nn.Dropout(p=0.2)(x)
+    #     x = self.pca(x)
+    #     x = einops.rearrange(x, 'b (v c) -> b v c', c=3)
+    #     return x + vtx_mean
