@@ -140,10 +140,14 @@ class render_and_landmark():
         )
 
         real_kpt = self.face_landmark_detector.detect(
-            img.contiguous().cpu().numpy().astype('uint8'))
-        
+            img.contiguous().cpu().numpy().astype('uint8'),
+            type='real',
+        )
+
         pred_kpt = self.face_landmark_detector.detect(
-            (255. * img).contiguous().cpu().numpy().astype('uint8'))
+            (255. * pred_images).contiguous().cpu().numpy().astype('uint8'),
+            type='pred',
+        )
 
         real_kpt = torch.from_numpy(real_kpt).to(device).requires_grad_(True)
         pred_kpt = torch.from_numpy(pred_kpt).to(device).requires_grad_(True)
