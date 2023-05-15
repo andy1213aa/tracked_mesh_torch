@@ -33,7 +33,7 @@ class Extracter(nn.Module):
             nn.Conv2d(486, 486, 3, 1),
             nn.ReLU(inplace=True),
         )
-
+        
         self.pca = nn.Sequential(nn.Linear(4860, 160),
                                 nn.Linear(160, 7306 * 3))
 

@@ -46,7 +46,7 @@ def get_dataloader():
         index_path,
         description,
         transform=decode_image,
-        # shuffle_queue_size=1024,
+        shuffle_queue_size=1024,
     )
     loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE)
     return loader
@@ -185,7 +185,9 @@ def train(net, dataloader, optimizer, criterion, epochs):
             np.frombuffer(data, dtype=np.float32).reshape(
                 (7306, 3))).to(device).requires_grad_(False)
     for epoch in range(epochs):
-        for i, batch in enumerate(dataloader):
+        for batch_num, batch in enumerate(dataloader):
+
+            step = (epoch + 1) * (batch_num + 1) * BATCH_SIZE
 
             img = batch["img"].to(device)
             camID = batch['camID'].requires_grad_(False).numpy()
@@ -220,40 +222,38 @@ def train(net, dataloader, optimizer, criterion, epochs):
 
             # 輸出即時結果
 
-            print(
-                f'Epoch: {epoch+1} Step: {(epoch+1)*(i+1)*BATCH_SIZE} L2 loss: {loss: 0.5f}'
+            print(f'Epoch: {epoch+1} Step: {step} L2 loss: {loss: 0.5f}')
+
+            if batch_num % 10 == 0:
+                img = einops.rearrange(img, 'b h w c -> b c h w')
+                render_images = einops.rearrange(render_images,
+                                                'b h w c -> b c h w')
+                writer.add_image(
+                    'input_images',
+                    img.to(torch.uint8),
+                    step,
+                    dataformats='NCHW',
+                )
+                writer.add_image(
+                    'pred_images',
+                    render_images,
+                    step,
+                    dataformats='NCHW',
+                )
+
+                # writer.add_mesh('real_mesh', vtx)
+                # writer.add_mesh('pred_mesh', pred_vtx)
+
+        if (epoch % 1 == 0):
+
+            if loss < bestLoss:
+                bestLoss = loss
+                bestepoch = epoch
+                bestModel = net
+            torch.save(
+                net,
+                f"model/epoch_{bestepoch}.pth",
             )
-
-            # img = einops.rearrange(img, 'b h w c -> b c h w')
-            # render_images = einops.rearrange(render_images,
-            #                                  'b h w c -> b c h w')
-            # writer.add_image(
-            #     'input_images',
-            #     img.to(torch.uint8),
-            #     (epoch + 1) * (i + 1) * BATCH_SIZE,
-            #     dataformats='NCHW',
-            # )
-            # writer.add_image(
-            #     'pred_images',
-            #     render_images,
-            #     (epoch + 1) * (i + 1) * BATCH_SIZE,
-            #     dataformats='NCHW',
-            # )
-
-            # writer.add_mesh('real_mesh', vtx)
-            # writer.add_mesh('pred_mesh', pred_vtx)
-
-        # if (epoch % 1 == 0):
-
-        #     if loss < bestLoss:
-        #         bestLoss = loss
-        #         bestepoch = epoch
-        #         bestModel = net
-
-        # torch.save(
-        #     net,
-        #     "model/epoch" + str(bestepoch) + "_" + str(bestLoss) + ".pth")
-
     torch.save(bestModel, "model.pth")
     return net
 
